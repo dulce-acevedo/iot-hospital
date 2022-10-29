@@ -1,1 +1,567 @@
-[{"id":"3af82246.3634ae","type":"tab","label":"Flow 1","disabled":false,"info":""}]
+[
+    {
+        "id": "3af82246.3634ae",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "d8557238fbd108a5",
+        "type": "tab",
+        "label": "Sensor 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "3d12f63b36c3a4a4",
+        "type": "sqlitedb",
+        "db": "/room.db",
+        "mode": "RWC"
+    },
+    {
+        "id": "b4edee82c558aa5d",
+        "type": "inject",
+        "z": "d8557238fbd108a5",
+        "name": "10 seconds interval",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 220,
+        "y": 480,
+        "wires": [
+            [
+                "0d3db658b91e88e8",
+                "659d0338fc1f5bd3"
+            ]
+        ]
+    },
+    {
+        "id": "0d3db658b91e88e8",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "Thermal Sensors: Increment counter",
+        "func": "var newCount = flow.get('count') || 0;\nvar personEnter = flow.get('personEnter') || false;\nvar rand = Math.random();\nif (msg.topic == 'reset'){\n    newCount = 0;\n}\nelse{\n    if (newCount < 5){\n        rand = (rand > 0.5) ? 1 : 0;\n        personEnter = (rand === 1) ? true : false;\n        newCount = newCount + rand;\n    }\n    else{\n        rand = 0;\n        personEnter = false;\n    }\n}\nflow.set(\"count\", newCount);\nflow.set(\"personEnter\", personEnter);\n\nmsg.payload = { increase: personEnter, count: newCount}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 340,
+        "wires": [
+            [
+                "b42f3c9a0f534557",
+                "9b31b48010eaa26e"
+            ]
+        ]
+    },
+    {
+        "id": "659d0338fc1f5bd3",
+        "type": "delay",
+        "z": "d8557238fbd108a5",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "3",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 480,
+        "y": 500,
+        "wires": [
+            [
+                "1c43f4909cbaca8d"
+            ]
+        ]
+    },
+    {
+        "id": "1c43f4909cbaca8d",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "Thermal Sensors: Decrement counter",
+        "func": "var newCount = flow.get('count') || 0;\nvar personLeaves = flow.get('personLeaves') || false;\nvar rand = Math.random();\nif (msg.topic == 'reset'){\n    newCount = 0;\n}\nelse{\n    if (newCount > 0){\n        rand = (rand > 0.5) ? 1 : 0;\n        personLeaves = (rand === 1) ? true : false;\n        newCount = newCount - rand;\n    }\n    else{\n        personLeaves = false;\n    }\n    \n}\nflow.set(\"count\", newCount);\nflow.set(\"personLeaves\", personLeaves);\n\nmsg.payload = { decrease: personLeaves, count: newCount }\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 680,
+        "wires": [
+            [
+                "2e5452616c6133fa",
+                "1799a3241a69180f"
+            ]
+        ]
+    },
+    {
+        "id": "4916819f10cef85b",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "function UPDATE counter in DB",
+        "func": "var count = flow.get('count')\nmsg.params = { $count: count }\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1090,
+        "y": 760,
+        "wires": [
+            [
+                "439e58b883823cc6"
+            ]
+        ]
+    },
+    {
+        "id": "84ea1c7aa1ee4dcf",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "RFID Tag: Set role",
+        "func": "var personEnter = flow.get('personEnter');\nvar roles = ['nurse', 'visitor', 'doctor'];\nvar role = \"null\";\nif (personEnter){\n    // Create new role\n    role = roles[Math.floor(Math.random() * roles.length)];\n    flow.set('currentrole', role);\n}\nflow.set('currentrole', role);\nmsg.payload = role;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 890,
+        "y": 160,
+        "wires": [
+            [
+                "6c11ddb5de94dc1f"
+            ]
+        ]
+    },
+    {
+        "id": "6c11ddb5de94dc1f",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "function INSERT INTO History",
+        "func": "var date = new Date();\ndate = date.toLocaleString();\nmsg.params = { $entry: date, $role: msg.payload };\nmsg.payload = { entry: date, role: msg.payload }\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1170,
+        "y": 160,
+        "wires": [
+            [
+                "efd76e9a1b9c9bc3",
+                "f893be6ad8f67566"
+            ]
+        ]
+    },
+    {
+        "id": "2e5452616c6133fa",
+        "type": "switch",
+        "z": "d8557238fbd108a5",
+        "name": "If user leaves the room",
+        "property": "personLeaves",
+        "propertyType": "flow",
+        "rules": [
+            {
+                "t": "true"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 780,
+        "y": 720,
+        "wires": [
+            [
+                "a45a836a5d5ec8f7",
+                "4916819f10cef85b"
+            ]
+        ]
+    },
+    {
+        "id": "a45a836a5d5ec8f7",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "function UPDATE History",
+        "func": "var date = new Date();\ndate = date.toLocaleString();\nmsg.params = { $exit: date};\nmsg.payload = { exit: date}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 640,
+        "wires": [
+            [
+                "207ad293c464c379",
+                "17a221f610e998e9"
+            ]
+        ]
+    },
+    {
+        "id": "efd76e9a1b9c9bc3",
+        "type": "debug",
+        "z": "d8557238fbd108a5",
+        "name": "Log Data of entering user",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1510,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "17a221f610e998e9",
+        "type": "debug",
+        "z": "d8557238fbd108a5",
+        "name": "Log exit time stamp of leaving user",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1460,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "b42f3c9a0f534557",
+        "type": "switch",
+        "z": "d8557238fbd108a5",
+        "name": "if user entered",
+        "property": "personEnter",
+        "propertyType": "flow",
+        "rules": [
+            {
+                "t": "true"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 760,
+        "y": 300,
+        "wires": [
+            [
+                "84ea1c7aa1ee4dcf",
+                "b317d92de3dec1ef"
+            ]
+        ]
+    },
+    {
+        "id": "1799a3241a69180f",
+        "type": "debug",
+        "z": "d8557238fbd108a5",
+        "name": "Monitor people leaving",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 780,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "9b31b48010eaa26e",
+        "type": "debug",
+        "z": "d8557238fbd108a5",
+        "name": "Monitor people entering",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 790,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "b317d92de3dec1ef",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "function UPDATE counter in DB",
+        "func": "var count = flow.get('count')\nmsg.params = { $count: count }\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1170,
+        "y": 300,
+        "wires": [
+            [
+                "d0dfd68e041e1bb3"
+            ]
+        ]
+    },
+    {
+        "id": "f2327a449d60e0df",
+        "type": "join",
+        "z": "d8557238fbd108a5",
+        "name": "Join Data",
+        "mode": "custom",
+        "build": "array",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": false,
+        "timeout": "",
+        "count": "3",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 900,
+        "y": 1020,
+        "wires": [
+            [
+                "7c95fd7f7368b128",
+                "ee1f0ce91268bdd8"
+            ]
+        ]
+    },
+    {
+        "id": "7c95fd7f7368b128",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "Function for INSERT QUERY VALUES",
+        "func": "var date = new Date();\ndate = date.toLocaleString();\nmsg.params = { $role: msg.payload[1], $latitude: msg.payload[0], $longitude: msg.payload[2], $date: date};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 1020,
+        "wires": [
+            [
+                "6fe061c629fa9c79"
+            ]
+        ]
+    },
+    {
+        "id": "342265c447040d18",
+        "type": "function",
+        "z": "d8557238fbd108a5",
+        "name": "PIR Sensor: Person Location",
+        "func": "var newCount = flow.get('count');\nvar roles = [];\n\nfor (let index = 1; index < newCount+1; index++) {\n    roles.push(`Person ${index}`);\n}\n// var roles = ['Person 1', 'Person 2', 'Person 3', 'Person 4'];\nvar role = \"null\";\nrole = roles[Math.floor(Math.random() * roles.length)];\nflow.set('currentrole', role);\nmsg.payload = role;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 1020,
+        "wires": [
+            [
+                "f2327a449d60e0df"
+            ]
+        ]
+    },
+    {
+        "id": "ee1f0ce91268bdd8",
+        "type": "debug",
+        "z": "d8557238fbd108a5",
+        "name": "Person Location",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1080,
+        "y": 1160,
+        "wires": []
+    },
+    {
+        "id": "17f2c4b5cbac7769",
+        "type": "inject",
+        "z": "d8557238fbd108a5",
+        "name": "10 seconds intervals",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 100,
+        "y": 1020,
+        "wires": [
+            [
+                "58a96ded766c01e4"
+            ]
+        ]
+    },
+    {
+        "id": "58a96ded766c01e4",
+        "type": "switch",
+        "z": "d8557238fbd108a5",
+        "name": "if room is not empty",
+        "property": "count",
+        "propertyType": "flow",
+        "rules": [
+            {
+                "t": "neq",
+                "v": "0",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 350,
+        "y": 1020,
+        "wires": [
+            [
+                "7c4b487a432712dd",
+                "342265c447040d18",
+                "8708e2e5fdf71e08"
+            ]
+        ]
+    },
+    {
+        "id": "439e58b883823cc6",
+        "type": "sqlite",
+        "z": "d8557238fbd108a5",
+        "mydb": "3d12f63b36c3a4a4",
+        "sqlquery": "prepared",
+        "sql": "UPDATE PeopleCounters SET count=$count WHERE roomNo = 1;",
+        "name": "UPDATE peopleCounter table",
+        "x": 1450,
+        "y": 760,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "207ad293c464c379",
+        "type": "sqlite",
+        "z": "d8557238fbd108a5",
+        "mydb": "3d12f63b36c3a4a4",
+        "sqlquery": "prepared",
+        "sql": "UPDATE Histories SET exit=$exit WHERE id= (SELECT id FROM Histories WHERE exit IS NULL ORDER BY id);",
+        "name": "UPDATE History table",
+        "x": 1420,
+        "y": 680,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d0dfd68e041e1bb3",
+        "type": "sqlite",
+        "z": "d8557238fbd108a5",
+        "mydb": "3d12f63b36c3a4a4",
+        "sqlquery": "prepared",
+        "sql": "UPDATE PeopleCounters SET count=$count WHERE roomNo = 1;",
+        "name": "UPDATE peopleCounter table",
+        "x": 1510,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f893be6ad8f67566",
+        "type": "sqlite",
+        "z": "d8557238fbd108a5",
+        "mydb": "3d12f63b36c3a4a4",
+        "sqlquery": "prepared",
+        "sql": "INSERT INTO Histories (entry, role) VALUES ($entry, $role);",
+        "name": "INSERT INTO History table",
+        "x": 1520,
+        "y": 160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6fe061c629fa9c79",
+        "type": "sqlite",
+        "z": "d8557238fbd108a5",
+        "mydb": "3d12f63b36c3a4a4",
+        "sqlquery": "prepared",
+        "sql": "INSERT INTO Locations (role, longitude, latitude, datetime) VALUES ($role, $longitude, $latitude, $date);",
+        "name": "INSERT INTO History table",
+        "x": 1500,
+        "y": 1020,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8708e2e5fdf71e08",
+        "type": "random",
+        "z": "d8557238fbd108a5",
+        "name": "Random Longitude Generator for user",
+        "low": "-27.477585",
+        "high": "-27.477584",
+        "inte": "false",
+        "property": "payload",
+        "x": 590,
+        "y": 1100,
+        "wires": [
+            [
+                "f2327a449d60e0df"
+            ]
+        ]
+    },
+    {
+        "id": "7c4b487a432712dd",
+        "type": "random",
+        "z": "d8557238fbd108a5",
+        "name": "Random Latitude Generator for user",
+        "low": "153.02939",
+        "high": "153.02940",
+        "inte": "false",
+        "property": "payload",
+        "x": 590,
+        "y": 940,
+        "wires": [
+            [
+                "f2327a449d60e0df"
+            ]
+        ]
+    }
+]
